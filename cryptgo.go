@@ -2,6 +2,7 @@ package cryptgo
 
 import (
 	"fmt"
+	"math"
 )
 
 func Hello(name string) string {
@@ -9,9 +10,14 @@ func Hello(name string) string {
 	return message
 }
 
+func Pow(base, exp, m int) int {
+	return int(math.Pow(float64(base), float64(exp))) % m
+}
+
+
 // public functions, types, etc should be uppercase
 // recursive euclid
-func Gcd(u int, v int) int { 
+func Gcd(u, v int) int { 
 	if v != 0 {
 		return Gcd(v, u % v)
 	}
@@ -19,7 +25,7 @@ func Gcd(u int, v int) int {
 }
 
 // recursive extended euclid
-func Bezout(u int, v int) (int, int) {  
+func Bezout(u, v int) (int, int) {  
 	var q, r int = 0, 1
 	var s1, s2, s3, t1, t2, t3 int = 1, 0, 1, 0, 1, 0  
 	for r > 0 {  // while does not exist
@@ -42,4 +48,8 @@ func Inv(u int, v int) (int) {  // inverse of u mod v
 	}
 	return i
 }
+
+
+// DLP
+
 
