@@ -5,7 +5,7 @@ import (
 )
 
 func TestExp(t *testing.T) {
-	result := Pow(9, 2, 8)
+	result := Pow(11, 16, 17)
 	expected := 1
 	if result != expected {
 		t.Errorf("Expected %d, but got %d", expected, result)
@@ -35,3 +35,13 @@ func TestInv(t *testing.T) {
 		t.Errorf("Expected %d, but got %d", expected, result)
 	}
 }
+
+func TestOrder(t *testing.T) {
+	result := Order(10, 13)
+	expected := 6 
+	if result != expected {
+		t.Errorf("Expected %d, but got %d", expected, result)
+	}
+}
+
+

@@ -10,8 +10,38 @@ func Hello(name string) string {
 	return message
 }
 
-func Pow(base, exp, m int) int {
-	return int(math.Pow(float64(base), float64(exp))) % m
+
+// variadic 
+// Pow(...args) [0]base, [1]exp, [2]m
+func Pow(arg ...int) int {
+	sz := len(arg)
+	if !(sz == 2 || sz == 3) {
+		panic("invalid args for Pow")
+	}
+
+	base := arg[0]
+	exp := arg[1]
+	if exp == 0 {
+		return 1
+	}
+	if sz == 3 {
+		p := arg[2]
+		base = base % p 
+		if base < 0 {
+			base += p	
+		}
+		// exp = exp % Order(base, p) recursive call fucks itself, checkout order...
+
+		fmt.Println(base, exp, p, Order(base, p))
+		if exp < 0 {
+			return Inv(int(math.Pow(float64(base), float64(-1 * exp))) % p, p) % p // this works somehow
+		}
+		return int(math.Pow(float64(base), float64(exp))) % p
+	}
+
+	return int(math.Pow(float64(base), float64(exp)))
+
+	
 }
 
 
@@ -49,7 +79,148 @@ func Inv(u int, v int) (int) {  // inverse of u mod v
 	return i
 }
 
+func Order(x, m int) int {
+	var k int = 1
+	for Pow(x, k, m) != 1 {
+		k++
+	}
+	return k
+}
 
-// DLP
+func PrimitiveRoots(m int) []int {
+	var roots []int
+	for i := 1; i < m; i++ {
+		if Order(i, m) == m - 1 {
+			roots = append(roots, i)
+		}
+	}
+
+	return roots
+}
+
+// I'll do Polhig-Hellman and index calc l8r
+
+// primality testing
+// beware of Carmichael :/ how the hell did i mess this up
+func FermatTest(p int) bool { 
+	for i:=1; i < p; i++ {
+		if Pow(i, p-1, p) != 1 {  // large powers breaking, i believe we are exceeding integer bounds
+			fmt.Printf("%d^%d != 1 mod %d", i, p-1, p)
+			return false
+		}
+	}
+	return true
+}
+
+// Shanks baby-giant
+func Shanks(g, h, p int) int {
+
+	N := Order(g, p)
+	b := int(math.Floor(math.Sqrt(float64(N)))) + 1
+	// fmt.Printf("order = %d, b = %d\n", N, b) // cool
+
+	// not efficient, for educational purposes, would like to make this more efficient with my own set
+
+	var baby, giant []int
+
+	for i := range (b + 1) {
+		baby = append(baby, Pow(g, i, p))
+		giant = append(giant, h * (Pow(g,-1 * i * b, p)) % p)
+	}
+
+	for i := range baby {
+		for j := range giant {
+			if baby[i] == giant[j] {
+				return i + j * b
+			}
+		}
+	}
+
+	return 0
+}
 
 
+// FACTORING !!!
+// just returns one of the factors of some composoite
+func Pollard_Factor(N, bound int) int { 
+	var a int = 2
+	var i int = 2
+	var curr int = a
+	var d int = 1
+	for i <= bound {
+		curr = Pow(curr, i, N)
+		d = Gcd(curr - 1, N)
+		if 1 < d && d < N {
+			return d
+		} else if d == N {
+			i = 2
+			a++
+		}
+		i++
+	}
+	return d
+}
+
+
+
+
+
+// elliptic curve crypto
+
+// addition using variadic funcs
+func Ec_add(a, b float64, pq ...float64,) (float64, float64) {
+
+	sz := len(pq)
+	if sz != 2 && sz != 4 {
+		return 0, 0
+	}
+
+	if sz == 2 {
+		x1 := pq[0]
+		y1 := pq[1]
+		lam := (3*math.Pow((x1), 2) + a) / (2 * y1)
+		x3 := math.Pow(lam, 2) - (2 * x1)
+		y3 := lam * (x1 - x3) - y1
+		return x3, y3
+	}
+
+	if sz == 4 {
+		x1, y1, x2, y2 := pq[0], pq[1], pq[2], pq[3]
+		lam := (y2 - y1) / (x2 - x1)
+		x3 := math.Pow(lam, 2) - x1 - x2
+		y3 := lam * (x1 - x3) - y1
+		return x3, y3
+	}
+
+	return 0, 0 
+}
+
+
+func Ecff_add(a, b, p int, pq ...int) (int, int) {
+	sz := len(pq)
+
+	x3, y3 := 0
+	if sz != 2 && sz != 4 {
+		return x3, y3
+	}
+
+
+	if sz == 2 {
+		x1, y1 := pq[0], pq[1]
+		lam = (3 * Pow(x1, 2, p) + a) * Pow(2*y1, -1, p)
+		x3 = (Pow(lam, 2, p) - 2*x1) % p
+		y3 = lam*(x1 - x3) - y1
+		return x3, y3
+	}
+
+
+	if sz == 4 {
+		x1, y1, x2, y2 := pq[0], pq[1], pq[2], pq[3]
+		lam = (y2 - y1) * pow((x2 - x1), -1, p)  // not sure if pow works for negatives, i should update inputs...
+		x3 = (Pow(lam, 2, p) - 2 * x1) % p
+		y3 = lam*(x1 - x3) - y1
+		return x3, y3
+	}
+
+	return x3, y3
+}
