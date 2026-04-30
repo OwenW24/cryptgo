@@ -3,6 +3,7 @@ package cryptgo
 import (
 	"fmt"
 	"math"
+	"strconv"
 )
 
 func Hello(name string) string {
@@ -10,6 +11,36 @@ func Hello(name string) string {
 	return message
 }
 
+
+// func Binary_expansion(m int){
+// 	expansion := strconv.FormatInt(int64(m), 2)
+// 	fmt.Println(expansion)
+// 	for i := range expansion {
+// 		fmt.Println(i, expansion[i])  // 49 == 1, 48 == 0
+// 	}
+// }
+
+func FastPow(base, exp, m int) int{
+	expansion := strconv.FormatInt(int64(exp), 2)
+	bits := len(expansion)
+	a := make([]int, bits)
+	a[bits-1] = base % m
+	result := 1
+	if expansion[bits-1] == 49 {
+		result = a[bits-1]
+	}
+
+	for i := bits-2; i >= 0; i-- {
+		
+		a[i] = (a[i+1] * a[i+1]) % m
+		if (expansion[i] == 49) {
+			result = (result * a[i]) % m
+		}
+		
+	}
+
+	return result
+}
 
 // variadic 
 // Pow(...args) [0]base, [1]exp, [2]m
@@ -24,19 +55,19 @@ func Pow(arg ...int) int {
 	if exp == 0 {
 		return 1
 	}
+
 	if sz == 3 {
 		p := arg[2]
-		base = base % p 
+		base = base % p
+		ord := Order(base, p)
 		if base < 0 {
 			base += p	
 		}
-		// exp = exp % Order(base, p) recursive call fucks itself, checkout order...
-
-		fmt.Println(base, exp, p, Order(base, p))
+		exp = exp % ord 
 		if exp < 0 {
-			return Inv(int(math.Pow(float64(base), float64(-1 * exp))) % p, p) % p // this works somehow
+			return Inv(FastPow(base, -1 * exp, p), p)// this works somehow
 		}
-		return int(math.Pow(float64(base), float64(exp))) % p
+		return FastPow(base, exp, p)
 	}
 
 	return int(math.Pow(float64(base), float64(exp)))
@@ -81,7 +112,7 @@ func Inv(u int, v int) (int) {  // inverse of u mod v
 
 func Order(x, m int) int {
 	var k int = 1
-	for Pow(x, k, m) != 1 {
+	for FastPow(x, k, m) != 1 {
 		k++
 	}
 	return k
@@ -102,16 +133,34 @@ func PrimitiveRoots(m int) []int {
 
 // primality testing
 // beware of Carmichael :/ how the hell did i mess this up
+
+
 func FermatTest(p int) bool { 
 	for i:=1; i < p; i++ {
 		if Pow(i, p-1, p) != 1 {  // large powers breaking, i believe we are exceeding integer bounds
-			fmt.Printf("%d^%d != 1 mod %d", i, p-1, p)
 			return false
 		}
 	}
 	return true
 }
 
+func MillerRabinTest(p int) {
+	// a := 2
+	k := 0
+	m := p - 1
+
+	for m%2 == 0 {
+		k += 1
+		m /= 2 
+	}
+
+	fmt.Printf("%d = (2^%d )%d", p, k, m)
+}
+
+
+
+
+// DLP ---
 // Shanks baby-giant
 func Shanks(g, h, p int) int {
 
@@ -140,6 +189,13 @@ func Shanks(g, h, p int) int {
 }
 
 
+func Index_dlp(g, h, p int) {
+	
+}
+
+
+
+
 // FACTORING !!!
 // just returns one of the factors of some composoite
 func Pollard_Factor(N, bound int) int { 
@@ -160,6 +216,7 @@ func Pollard_Factor(N, bound int) int {
 	}
 	return d
 }
+
 
 
 
@@ -199,7 +256,7 @@ func Ec_add(a, b float64, pq ...float64,) (float64, float64) {
 func Ecff_add(a, b, p int, pq ...int) (int, int) {
 	sz := len(pq)
 
-	x3, y3 := 0
+	x3, y3 := 0, 0
 	if sz != 2 && sz != 4 {
 		return x3, y3
 	}
@@ -207,7 +264,7 @@ func Ecff_add(a, b, p int, pq ...int) (int, int) {
 
 	if sz == 2 {
 		x1, y1 := pq[0], pq[1]
-		lam = (3 * Pow(x1, 2, p) + a) * Pow(2*y1, -1, p)
+		lam := (3 * Pow(x1, 2, p) + a) * Pow(2*y1, -1, p)
 		x3 = (Pow(lam, 2, p) - 2*x1) % p
 		y3 = lam*(x1 - x3) - y1
 		return x3, y3
@@ -216,7 +273,7 @@ func Ecff_add(a, b, p int, pq ...int) (int, int) {
 
 	if sz == 4 {
 		x1, y1, x2, y2 := pq[0], pq[1], pq[2], pq[3]
-		lam = (y2 - y1) * pow((x2 - x1), -1, p)  // not sure if pow works for negatives, i should update inputs...
+		lam := (y2 - y1) * Pow((x2 - x1), -1, p)  // not sure if pow works for negatives, i should update inputs...
 		x3 = (Pow(lam, 2, p) - 2 * x1) % p
 		y3 = lam*(x1 - x3) - y1
 		return x3, y3
